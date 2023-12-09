@@ -1,0 +1,26 @@
+```{r}
+library(ROCR)
+
+perf_knn <- performance(pred_knn, "tpr", "fpr")
+perf_rf <- performance(pred_rf, "tpr", "fpr")
+perf_logistic <- performance(pred_logistic, "tpr", "fpr")
+perf_svm <- performance(pred_svm, "tpr", "fpr")
+
+auc_knn <- performance(pred_knn, measure = "auc")@y.values[[1]]
+auc_rf <- performance(pred_rf, measure = "auc")@y.values[[1]]
+auc_logistic <- performance(pred_logistic, measure = "auc")@y.values[[1]]
+auc_svm <- performance(pred_svm, measure = "auc")@y.values[[1]]
+
+plot(perf_knn, col = "red")
+plot(perf_rf, col = "blue", add = TRUE)
+plot(perf_logistic, col = "black", add = TRUE)
+plot(perf_svm, col = "grey", add = TRUE)
+legend("bottomright", legend = c("knn", "random forest", "logistic", "svm"),
+       col = c("red", "blue", "black", "grey"), lty = 1)
+
+text(x = 0.3, y = 0.4, labels = paste("AUC-knn =", round(auc_knn, 2)), col = "red")
+text(x = 0.3, y = 0.3, labels = paste("AUC-random forest =", round(auc_rf, 2)), col = "blue")
+text(x = 0.3, y = 0.2, labels = paste("AUC-logistic =", round(auc_logistic, 2)), col = "black")
+text(x = 0.3, y = 0.1, labels = paste("AUC-svm =", round(auc_svm, 2)), col = "grey")
+```
+

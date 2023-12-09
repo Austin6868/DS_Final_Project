@@ -1,0 +1,185 @@
+---
+title: "Credit Risk V1"
+output: html_document
+date: "2023-11-13"
+---
+
+```{r}
+library(dplyr)
+library(dummy)
+library(FNN)
+library(class)
+library(caret)
+library(ggplot2)
+library(lattice)
+library(kknn)
+library(ROCR)
+```
+
+
+```{r}
+options(repos = c(CRAN = "https://cloud.r-project.org/"))
+set.seed(1)
+creditData=na.omit(read.csv ("credit_risk_dataset.csv", header = TRUE))
+num_samples = dim(creditData)[1]
+
+creditData$cb_person_default_on_file <- ifelse(creditData$cb_person_default_on_file == "Y", 1, 0)
+creditData$cb_person_default_on_file <- factor(creditData$cb_person_default_on_file, levels = c(1, 0))
+
+head(creditData)
+```
+
+
+```{r}
+home_ownership_types <- creditData %>% 
+  count(person_home_ownership)
+
+print(home_ownership_types)
+
+loan_intent <- creditData %>% 
+  count(loan_intent)
+
+print(loan_intent)
+
+loan_grade <- creditData %>% 
+  count(loan_grade)
+
+print(loan_grade)
+
+cb_person_default_on_file <- creditData %>% 
+  count(cb_person_default_on_file)
+
+print(cb_person_default_on_file)
+
+```
+```{r}
+## loan status is Y 
+summary (creditData$person_home_ownership)
+
+
+
+# creating dummy variables
+temp_ownership <- data.frame(person_home_ownership = creditData$person_home_ownership)
+creditData <- cbind(creditData, dummy(temp_ownership))
+creditData <- subset(creditData, select = -person_home_ownership)
+
+temp_intent <- data.frame(intent = creditData$loan_intent)
+creditData <- cbind(creditData, dummy(temp_intent))
+creditData <- subset(creditData, select = -loan_intent)
+
+temp_grade <- data.frame(grade = creditData$loan_grade)
+creditData <- cbind(creditData, dummy(temp_grade))
+creditData <- subset(creditData, select = -loan_grade)
+
+creditData <- as.data.frame(sapply(creditData, function(x) as.numeric(as.character(x))))
+creditData <- creditData
+
+
+# normalizing the data
+creditData$person_age = (creditData$person_age-mean(creditData$person_age))/sd(creditData$person_age)
+creditData$person_income = (creditData$person_income - mean(creditData$person_income))/sd(creditData$person_income)
+creditData$person_emp_length = (creditData$person_emp_length - mean(creditData$person_emp_length))/sd(creditData$person_emp_length)
+creditData$loan_amnt = (creditData$loan_amnt - mean(creditData$loan_amnt))/sd(creditData$loan_amnt)
+creditData$loan_int_rate = (creditData$loan_int_rate - mean(creditData$loan_int_rate))/sd(creditData$loan_int_rate)
+creditData$cb_person_cred_hist_length = (creditData$cb_person_cred_hist_length - mean(creditData$cb_person_cred_hist_length))/sd(creditData$cb_person_cred_hist_length)
+```
+
+
+```{r}
+bestK <- 0
+minerrors <- Inf
+
+# Initialize the progress bar
+pbcount <- 0
+pb <- txtProgressBar(min = 0, max = 100, style = 3)
+
+for(iter in 55:65)
+{
+  AllErrors=numeric(50)
+  for(fold in 1:10)
+  {
+    #Get Training at Testing sets
+    training <- sample(1:num_samples, 0.8 * num_samples, replace=FALSE)
+    trainingSet <- subset(creditData[training, ]) 
+    testing <- setdiff(1:num_samples,training) 
+    testingSet <- subset(creditData[testing, ])
+    # Get the features of the training set
+    trainingfeatures <- subset(trainingSet, select=c(-loan_status))
+    # Get the labels of the training set
+    traininglabels <- trainingSet$loan_status
+    # Get the features of the testing set
+    testingfeatures <- subset(testingSet, select=c(-loan_status))
+    
+    sizeTestSet = dim(testingSet)[1]
+    knnModel = kknn(loan_status ~. ,train = trainingSet,test = testingSet,k=iter)
+    predProbs <- fitted(knnModel)
+    predictions = ifelse(predProbs > 0.5, 1, 0)
+    
+    error = sum(predictions != testingSet$loan_status)
+    mis_rate=error/sizeTestSet
+    AllErrors[fold] = mis_rate
+    
+    # Setting the progress bar
+    pbcount <- pbcount + 1
+    setTxtProgressBar(pb, pbcount)
+  }
+  
+  currError = mean(AllErrors)
+  if (currError < minerrors){
+    bestK = iter
+    minerrors = currError
+  }
+}
+close(pb)
+print(bestK)
+```
+```{r}
+num_samples = dim(creditData)[1]
+training=sample(1:num_samples,0.8*num_samples,replace=FALSE) 
+trainingsSet=subset(creditData[training,])
+
+testing = setdiff(1:num_samples, training)
+testingSet = subset(creditData[testing, ])
+```
+
+```{r}
+trainingfeature = subset(trainingsSet, select=c(-loan_status))
+
+traininglabel =trainingsSet$loan_status
+
+testingfeature = subset(testingSet, select=c(-loan_status))
+```
+
+```{r}
+knnModel <- kknn(loan_status ~. , train = trainingSet, test = testingSet, k=bestK)
+
+predProbs <- fitted(knnModel)
+predictionLabels = ifelse(predProbs > 0.5, 1, 0)
+print(predictionLabels)
+
+head(predictionLabels)
+print(class(predictionLabels))
+head(testingSet$loan_status)
+```
+
+```{r}
+sizeTestSet = dim(testingSet)[1] 
+error = sum(predictionLabels!=testingSet$loan_status)
+
+mis_rate=error/sizeTestSet
+
+print(mis_rate)
+```
+```{r}
+conf_matrix <- confusionMatrix(as.factor(predictionLabels), as.factor(testingSet$loan_status), positive = "1")
+print(conf_matrix)
+```
+
+```{r}
+pred = prediction(predProbs, testingSet$loan_status)
+pred_knn = pred
+print(predProbs)
+roc_obj = performance(pred, measure = "tpr", x.measure = "fpr")
+auc_obj = performance(pred, measure = "auc")
+plot(roc_obj, main = paste("Area under the curve:", round(auc_obj@y.values[[1]], 2)))
+```

@@ -1,0 +1,46 @@
+Using Random Forest to predict the loan status
+```{r}
+library(ROCR)
+options(repos = c(CRAN = "https://cloud.r-project.org/"))
+set.seed(43)
+creditRiskData = na.omit(read.csv("credit_risk_dataset.csv"))
+creditRiskData$cb_person_default_on_file <- ifelse(creditRiskData$cb_person_default_on_file == "Y", 1, 0)
+creditRiskData$cb_person_default_on_file <- factor(creditRiskData$cb_person_default_on_file, levels = c(1, 0))
+creditRiskData$loan_status <- factor(creditRiskData$loan_status, levels = c(1, 0))
+head(creditRiskData)
+```
+Create a training and a test set
+```{r}
+split_index <- sample(1:nrow(creditRiskData), 0.8 * nrow(creditRiskData))
+
+train_set <- creditRiskData[split_index, ]
+test_set <- creditRiskData[-split_index, ]
+```
+Use random forest to predict the test set
+```{r}
+library(randomForest)
+
+rfCreditRiskModel <- randomForest(loan_status ~ ., data = train_set)
+
+predProbs <- predict(rfCreditRiskModel, test_set, type = "prob")[,1]
+
+predictions = ifelse(predProbs > 0.5, 1, 0)
+
+print(rfCreditRiskModel)
+
+print(nrow(predictions))
+```
+```{r}
+# building the confusion matrix
+library(caret)
+conf_matrix <- confusionMatrix(as.factor(predictions), as.factor(test_set$loan_status), positive = "1")
+print(conf_matrix)
+```
+
+```{r}
+pred = prediction(predProbs, test_set$loan_status)
+pred_rf = pred
+roc_obj = performance(pred, measure = "tpr", x.measure = "fpr")
+auc_obj = performance(pred, measure = "auc")
+plot(roc_obj, main = paste("Area under the curve:", round(auc_obj@y.values[[1]], 2)))
+```

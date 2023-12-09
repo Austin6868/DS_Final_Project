@@ -1,0 +1,97 @@
+---
+title: "Loan Logistic Regression"
+output: html_document
+date: "2023-11-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Load the relevant packages
+```{r}
+library(dplyr)
+library(caret)
+library(ROCR)
+library(car)
+library(dummy)
+library(fastDummies)
+```
+
+# Read the data into R and remove all "NA" rows
+```{r}
+LoanData = read.csv("credit_risk_dataset.csv")
+head(LoanData)
+LoanData = na.omit(LoanData)
+```
+
+# Remove loan_percent_income becuase it's a redundant variable - the dataset already has loan amount and income 
+```{r}
+LoanData$loan_percent_income = NULL
+```
+
+# Convert categorical data into dummy variables and the default on file into a binary variable 
+```{r}
+LoanData = dummy_cols(LoanData, select_columns = "person_home_ownership")
+LoanData = dummy_cols(LoanData, select_columns = "loan_intent")
+LoanData = dummy_cols(LoanData, select_columns = "loan_grade")
+default_on_file = ifelse(LoanData$cb_person_default_on_file == "Y", 1, 0)
+LoanData$person_home_ownership = NULL
+LoanData$loan_intent = NULL
+LoanData$loan_grade = NULL
+LoanData$cb_person_default_on_file = NULL
+head(LoanData)
+```
+
+# Set the seed so results can be replicated 
+```{r}
+set.seed(4469)
+```
+
+# Split the dataset into training set (80%) and test test (20%)
+```{r}
+splitData = caret::createDataPartition(LoanData$loan_status, p = 0.8, list=FALSE)
+trainData = LoanData[splitData,]
+testData = LoanData[-splitData,]
+```
+
+# Apply Logistic Regression on Training set
+```{r}
+trainDataLR = glm(loan_status ~ ., data=trainData, family=binomial(link="logit"))
+summary(trainDataLR)
+```
+
+
+# Retrain the data after removing th einsignificnat variables 
+```{r}
+trainDataLR = glm(loan_status ~ person_age  + person_income + person_emp_length + loan_amnt + loan_int_rate + person_home_ownership_MORTGAGE + person_home_ownership_OWN + loan_intent_DEBTCONSOLIDATION + loan_intent_EDUCATION + loan_intent_HOMEIMPROVEMENT + loan_intent_MEDICAL + loan_intent_PERSONAL, data=trainData, family=binomial(link="logit"))
+summary(trainDataLR)
+```
+
+# Predicting probabilities and set threshold at 0.5
+```{r}
+pred_probs = predict(trainDataLR, testData, type = "response")
+testData$Predicted = ifelse(pred_probs > 0.5, 1, 0)
+```
+
+# Convert Predicted and Churned columns to factor with explicit levels
+```{r}
+testData$Predicted = factor(testData$Predicted, levels = c(0, 1))
+testData$loan_status = factor(testData$loan_status, levels = c(0, 1))
+head(testData)
+```
+
+# Confusionmatrix; its values depend on the treshold we choose (0.5 in this case)
+```{r}
+confusionMatrix(testData$Predicted, testData$loan_status, positive = "1")
+```
+
+# Calculating and plotting ROC curve
+```{r}
+pred = prediction(pred_probs, testData$loan_status)
+pred_logistic = pred
+roc_obj = performance(pred, measure = "tpr", x.measure = "fpr")
+auc_obj = performance(pred, measure = "auc")
+plot(roc_obj, main = paste("Area under the curve:", round(auc_obj@y.values[[1]], 2)))
+```
+
