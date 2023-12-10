@@ -1,5 +1,5 @@
 # DS_Final_Project
-The repo for the Ivey Data Science course final project, both knitted and ```Rmd``` versions and how to run the code.
+The repo for the Ivey Data Science course final project, <b>Team Lisbon</b>, both knitted and ```Rmd``` versions and how to run the code.
 
 ## How to get it to run?
 As all of the runnable files are in the ```Rmd``` format, you will probably need [RStudio](https://posit.co/download/rstudio-desktop/). 
