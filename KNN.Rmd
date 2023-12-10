@@ -3,7 +3,7 @@ title: "Credit Risk V1"
 output: html_document
 date: "2023-11-13"
 ---
-
+# import all packages
 ```{r}
 library(dplyr)
 library(dummy)
@@ -16,7 +16,7 @@ library(kknn)
 library(ROCR)
 ```
 
-
+# convert cb_person_default_on_file col into factor
 ```{r}
 options(repos = c(CRAN = "https://cloud.r-project.org/"))
 set.seed(1)
@@ -29,7 +29,7 @@ creditData$cb_person_default_on_file <- factor(creditData$cb_person_default_on_f
 head(creditData)
 ```
 
-
+# getting an overview of classification variables
 ```{r}
 home_ownership_types <- creditData %>% 
   count(person_home_ownership)
@@ -84,7 +84,7 @@ creditData$loan_int_rate = (creditData$loan_int_rate - mean(creditData$loan_int_
 creditData$cb_person_cred_hist_length = (creditData$cb_person_cred_hist_length - mean(creditData$cb_person_cred_hist_length))/sd(creditData$cb_person_cred_hist_length)
 ```
 
-
+# K fold cross validation to deterine the best k
 ```{r}
 bestK <- 0
 minerrors <- Inf
@@ -133,6 +133,7 @@ for(iter in 55:65)
 close(pb)
 print(bestK)
 ```
+# Splitting training and testing set
 ```{r}
 num_samples = dim(creditData)[1]
 training=sample(1:num_samples,0.8*num_samples,replace=FALSE) 
@@ -141,7 +142,7 @@ trainingsSet=subset(creditData[training,])
 testing = setdiff(1:num_samples, training)
 testingSet = subset(creditData[testing, ])
 ```
-
+# using loan status as training and testing features
 ```{r}
 trainingfeature = subset(trainingsSet, select=c(-loan_status))
 
@@ -149,19 +150,18 @@ traininglabel =trainingsSet$loan_status
 
 testingfeature = subset(testingSet, select=c(-loan_status))
 ```
-
+# train the model with the traiing set
 ```{r}
 knnModel <- kknn(loan_status ~. , train = trainingSet, test = testingSet, k=bestK)
 
 predProbs <- fitted(knnModel)
 predictionLabels = ifelse(predProbs > 0.5, 1, 0)
-print(predictionLabels)
 
 head(predictionLabels)
 print(class(predictionLabels))
 head(testingSet$loan_status)
 ```
-
+# make predictions with the testing set
 ```{r}
 sizeTestSet = dim(testingSet)[1] 
 error = sum(predictionLabels!=testingSet$loan_status)
@@ -170,11 +170,12 @@ mis_rate=error/sizeTestSet
 
 print(mis_rate)
 ```
+# generate the confusion matrix
 ```{r}
 conf_matrix <- confusionMatrix(as.factor(predictionLabels), as.factor(testingSet$loan_status), positive = "1")
 print(conf_matrix)
 ```
-
+# plot the roc and auc to determine the performance of the model
 ```{r}
 pred = prediction(predProbs, testingSet$loan_status)
 pred_knn = pred

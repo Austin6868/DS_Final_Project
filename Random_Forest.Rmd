@@ -1,4 +1,4 @@
-Using Random Forest to predict the loan status
+# Using Random Forest to predict the loan status
 ```{r}
 library(ROCR)
 options(repos = c(CRAN = "https://cloud.r-project.org/"))
@@ -9,14 +9,16 @@ creditRiskData$cb_person_default_on_file <- factor(creditRiskData$cb_person_defa
 creditRiskData$loan_status <- factor(creditRiskData$loan_status, levels = c(1, 0))
 head(creditRiskData)
 ```
-Create a training and a test set
+# Create a training and a test set and remove the colinear cols
 ```{r}
 split_index <- sample(1:nrow(creditRiskData), 0.8 * nrow(creditRiskData))
 
 train_set <- creditRiskData[split_index, ]
+train_set = subset(train_set, select = -loan_percent_income)
 test_set <- creditRiskData[-split_index, ]
+test_set = subset(test_set, select = -loan_percent_income)
 ```
-Use random forest to predict the test set
+# Use random forest to predict the test set
 ```{r}
 library(randomForest)
 
@@ -30,6 +32,7 @@ print(rfCreditRiskModel)
 
 print(nrow(predictions))
 ```
+# generating the confusion matrix
 ```{r}
 # building the confusion matrix
 library(caret)

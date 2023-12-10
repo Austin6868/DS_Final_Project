@@ -1,3 +1,4 @@
+# cleaning the data and turning relevant fields into factors
 ```{r}
 library(e1071)
 library(ROCR)
@@ -61,7 +62,7 @@ creditData$loan_amnt = (creditData$loan_amnt - mean(creditData$loan_amnt))/sd(cr
 creditData$loan_int_rate = (creditData$loan_int_rate - mean(creditData$loan_int_rate))/sd(creditData$loan_int_rate)
 creditData$cb_person_cred_hist_length = (creditData$cb_person_cred_hist_length - mean(creditData$cb_person_cred_hist_length))/sd(creditData$cb_person_cred_hist_length)
 ```
-
+# split train and test sets and train the model on the training set
 ```{r}
 training <- sample(1:num_rows, 0.8 * num_rows, replace=FALSE)
 trainingSet <- subset(creditData[training, ]) 
@@ -75,6 +76,7 @@ svmModel <- svm(loan_status ~., data = trainingSet, kernel = "linear", cost = 20
 print(svmModel)
 ```
 
+# test the model on the testing set and get its acccuracy
 ```{r}
 num_samples = dim(testingSet)[1]
 
@@ -85,6 +87,7 @@ mis_rate=error/num_samples
 accuracy = 1 - mis_rate
 print(accuracy)
 ```
+# Generate the confusion matrix
 ```{r}
 library(caret)
 library(ggplot2)
@@ -92,7 +95,7 @@ library(lattice)
 conf_matrix <- confusionMatrix(as.factor(predictLabels), as.factor(testingSet$loan_status), positive = "1")
 print(conf_matrix)
 ```
-Plot ROC
+# Plot ROC and determine AUC
 ```{r}
 pred = prediction(predProbs, testingSet$loan_status)
 pred_svm = pred
