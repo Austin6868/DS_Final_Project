@@ -9,4 +9,4 @@ Open up the projects in RStudio, you would be able to execute all of the blocks 
 But note that you should always execute the scripts in ```ROC.Rmd``` <b>LAST</b> as it uses the cached variables from the previous data models.
 
 ## Additional Notes
-The data exploration code including the graphs for age against frequency and such are in this [Notebook](https://colab.research.google.com/drive/1DAUNbjThCl982-yP_dZO7vRI2YV2XQzZ?usp=sharing).
+The data exploration code including the graphs for age against frequency and such are in this [Notebook](https://colab.research.google.com/drive/1DAUNbjThCl982-yP_dZO7vRI2YV2XQzZ?usp=sharing). It is also uploaded as "credit_risk_exploration.ipynb" file in this repo.
